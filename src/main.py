@@ -14,6 +14,7 @@ from .core.logging import setup_logging
 from scripts.run_migrations import run_migrations
 
 logger = setup_logging()
+run_migrations()
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
