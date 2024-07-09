@@ -21,6 +21,9 @@ class PostService:
 		"""
 		self.post_repo = PostRepository(Post, db)
 
+	# Cache dictionary to store posts
+	self.post_cache = {}
+
 	def create_post(self, title: str, content: str, author: User) -> Post:
 		"""
 		Creates a new post.
@@ -48,7 +51,12 @@ class PostService:
 			Post: The retrieved post.
 		"""
 		logger.info(f"Fetching post with id: {post_id}")
-		return self.post_repo.get(post_id)
+		if post_id in self.post_cache:
+			return self.post_cache[post_id]
+		post = self.post_repo.get(post_id)
+		if post:
+			self.post_cache[post_id] = post
+		return post
 
 	def update_post(self, post_id: int, title: str, content: str) -> Post:
 		"""
