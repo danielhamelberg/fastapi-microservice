@@ -1,0 +1,106 @@
+name: Project Configuration Manager GitOps
+
+trigger:
+  - main
+
+variables:
+  - group: project-variables
+
+stages:
+  - stage: Build
+    jobs:
+      - job: BuildJob
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.9'
+          - script: |
+                - script: |
+                  python -m pip install --upgrade pip setuptools wheel
+                  pip install -r requirements.txt
+                displayName: 'Install dependencies'
+            displayName: 'Install dependencies'
+          - script: |
+              python -m pytest tests/
+            displayName: 'Run tests'
+          - task: Docker@2
+            inputs:
+              containerRegistry: 'dockerRegistry'
+              repository: '$(dockerRepoName)'
+              command: 'buildAndPush'
+              Dockerfile: '**/Dockerfile'
+              tags: |
+                $(Build.BuildId)
+                latest
+
+  - stage: DeployDev
+    condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/pull/')))
+    jobs:
+      - deployment: DeployToDev
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: 'development'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: PowerShell@2
+                  inputs:
+                    targetType: 'inline'
+                    script: |
+                      kubectl apply -f $(Pipeline.Workspace)/manifests/*
+                      kubectl create secret docker-registry myregistrykey --docker-server=$(containerRegistry) --docker-username=$(dockerUsername) --docker-password=$(dockerPassword) --docker-email=$(dockerEmail)
+                      kubectl set image deployment/myapp myapp=$(containerRegistry)/$(imageRepository):$(tag)
+
+  - stage: DeployProd
+    condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/pull/')))
+    jobs:
+      - deployment: DeployToProd
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: 'production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: PowerShell@2
+                  inputs:
+                    targetType: 'inline'
+                    script: |
+                      kubectl apply -f $(Pipeline.Workspace)/manifests/*
+                      kubectl create secret docker-registry myregistrykey --docker-server=$(containerRegistry) --docker-username=$(dockerUsername) --docker-password=$(dockerPassword) --docker-email=$(dockerEmail)
+                      kubectl set image deployment/myapp myapp=$(containerRegistry)/$(imageRepository):$(tag)
+
+  - stage: GitOpsSync
+    condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/pull/')))
+    jobs:
+      - job: SyncGitOpsRepo
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - checkout: git://ProjectConfigManager/gitops-config
+          - script: |
+              git config user.email "d-n--lh-m-lb-rg@linux.com"
+              git config user.name "Azure DevOps Pipeline"
+              sed -i 's|image: .*|image: $(containerRegistry)/$(imageRepository):$(Build.BuildId)|' kubernetes/deployment.yaml
+              git add kubernetes/deployment.yaml
+              git commit -m "Update image to $(Build.BuildId)"
+              git push origin main
+            displayName: 'Update GitOps repo'
+
+  - stage: FluxCD
+    condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/pull/')))
+    jobs:
+      - job: TriggerFluxCD
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: Kubernetes@1
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              namespace: 'flux-system'
+              command: 'apply'
+              arguments: '-f https://raw.githubusercontent.com/danielhamelberg/ProjectConfigManager/gitops-config/main/flux-system/gotk-sync.yaml'
+            displayName: 'Trigger FluxCD sync'

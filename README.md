@@ -1,8 +1,10 @@
-# FastAPI Microservice Project
+# FastAPI Microservice Project (testing wip)
 
-This project is a microservice built with FastAPI.
+This project is a microservice built with FastAPI, designed to provide a robust and scalable API for various applications. It includes features such as user authentication, post management, and more.
+
 
 ## Table of Contents
+
 
 - [Overview](#overview)
 - [Features](#features)
@@ -14,9 +16,6 @@ This project is a microservice built with FastAPI.
 - [Contributing](#contributing)
 - [License](#license)
 
-## Overview
-
-This project is a microservice built with FastAPI, designed to provide a robust and scalable API for various applications. It includes features such as user authentication, post management, and more.
 
 ## Features
 
@@ -103,4 +102,5 @@ Contributions are welcome! Please read the [contributing guidelines](CONTRIBUTIN
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU General Public License v3.0.
+```

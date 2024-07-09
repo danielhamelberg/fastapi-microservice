@@ -20,11 +20,9 @@ class PostService:
 			db (Session): The database session object.
 		"""
 		self.post_repo = PostRepository(Post, db)
+		
 		# Cache dictionary to store posts
 		self.post_cache = {}
-
-	# Cache dictionary to store posts
-	self.post_cache = {}
 
 	def create_post(self, title: str, content: str, author: User) -> Post:
 		"""
