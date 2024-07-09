@@ -49,6 +49,7 @@ async def get_open_api_endpoint():
 
 
 @app.post("/posts", response_model=schemas.PostResponse, status_code=status.HTTP_201_CREATED)
+@admin_required
 async def create_post(post: schemas.PostCreate, db: Session = Depends(get_db), user: models.User = Depends(get_current_active_user)):
     post_service = PostService(db)
     return post_service.create_post(post, user)
