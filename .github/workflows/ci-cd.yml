@@ -40,7 +40,14 @@ jobs:
         flake8 .
         black --check .
 
-  build-and-push:
+  build-dev:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+    - name: Build and start services with Docker Compose
+      run: docker-compose up -d
     needs: [test, lint]
     runs-on: ubuntu-latest
     steps:
